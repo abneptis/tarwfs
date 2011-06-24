@@ -1,7 +1,6 @@
 package tarwfs
 
 import (
-	. "log"
 	"io"
 	"os"
 	"github.com/hanwen/go-fuse/fuse"
@@ -20,7 +19,7 @@ type TarwFS struct {
 	w     *tar.Writer
 }
 
-func NewTarwFS(w io.Writer) (wfs *TarwFS) {
+func New(w io.Writer) (wfs *TarwFS) {
 	wfs = &TarwFS{
 		files: map[string]*os.FileInfo{
 			"": &os.FileInfo{Mode: 0755 | syscall.S_IFDIR},
@@ -34,7 +33,7 @@ func NewTarwFS(w io.Writer) (wfs *TarwFS) {
 }
 
 func (self *TarwFS) GetAttr(name string) (fi *os.FileInfo, eno fuse.Status) {
-	Printf("GetAttr:start:%s", name)
+	//log.Printf("GetAttr:start:%s", name)
 	self.lock.Lock()
 	fi, exists := self.files[name]
 	self.lock.Unlock()
@@ -43,13 +42,13 @@ func (self *TarwFS) GetAttr(name string) (fi *os.FileInfo, eno fuse.Status) {
 	} else {
 		eno = fuse.ENOENT
 	}
-	Printf("GetAttr:finish:%s:%v\t%+v", name, eno, fi)
+	//log.Printf("GetAttr:finish:%s:%v\t%+v", name, eno, fi)
 
 	return
 }
 
 func (self *TarwFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status) {
-	Printf("GetAttr:start:%s", name)
+	//log.Printf("GetAttr:start:%s", name)
 	self.lock.Lock()
 	is_dir, exists := self.isDir[name]
 	self.lock.Unlock()
@@ -60,7 +59,7 @@ func (self *TarwFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status)
 			self.lock.Lock()
 			// send ourselves first.
 			dent := fuse.DirEntry{Name: ".", Mode: self.files[name].Mode}
-			Printf("Opendir(%s) -> %s {%+v}", name, ".", dent)
+			//log.Printf("Opendir(%s) -> %s {%+v}", name, ".", dent)
 			self.lock.Unlock()
 			c <- dent
 			self.lock.Lock()
@@ -69,10 +68,10 @@ func (self *TarwFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status)
 				k_d, k_n := path.Split(k)
 				if path.Join(name, k_n) == path.Join(k_d, k_n) && path.Join(name, k_n) != name {
 					dent := fuse.DirEntry{Name: k_n, Mode: v.Mode}
-					Printf("Opendir(%s) ->  %s|%s", name, k_d, k_n)
+					//log.Printf("Opendir(%s) ->  %s|%s", name, k_d, k_n)
 					c <- dent
 				} else {
-					Printf("%s is not the parent of %s|%s", name, k_d, k_n)
+					//log.Printf("%s is not the parent of %s|%s", name, k_d, k_n)
 				}
 				self.lock.Lock()
 			}
@@ -92,7 +91,7 @@ func (self *TarwFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status)
 }
 
 func (self *TarwFS) Mkdir(name string, mode uint32) (eno fuse.Status) {
-	Printf("Open:Mkdir:%s:%x", name, mode)
+	//log.Printf("Open:Mkdir:%s:%x", name, mode)
 	self.lock.Lock()
 	_, exists := self.isDir[name]
 	if exists {
@@ -122,12 +121,12 @@ func (self *TarwFS) Mkdir(name string, mode uint32) (eno fuse.Status) {
 			eno = fuse.EIO
 		}
 	}
-	Printf("Open:Mkdir:%s:%x:%x:done\t%s", name, mode, eno)
+	//log.Printf("Open:Mkdir:%s:%x:%x:done\t%s", name, mode, eno)
 	return
 }
 
 func (self *TarwFS) Create(name string, flags, mode uint32) (file fuse.File, eno fuse.Status) {
-	Printf("Create:%s", name)
+	//log.Printf("Create:%s", name)
 	self.lock.Lock()
 	_, exists := self.isDir[name]
 	if !exists {

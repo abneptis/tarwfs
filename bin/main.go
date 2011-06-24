@@ -17,7 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't open tarfile: %v", err)
 	}
-	fs := NewWSOWFS(fp)
+	fs := tarwfs.New(fp)
 	state, _, err := fuse.MountFileSystem(flag.Arg(0), fuse.NewLoggingFileSystem(fs), nil)
 	log.Printf("State: %v\tErr: %v", state, err)
 
