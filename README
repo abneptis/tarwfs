@@ -1,0 +1,28 @@
+Implements (and demonstrates) a WORN 'filesystem' with Fuse on Go:
+  Write Once, Read Never.
+
+DEPS: https://github.com/hanwen/go-fuse
+ALT-DEPS (deb-systems): git://github.com/abneptis/go-fuse.git
+
+
+  Which is a bit of a misnomer, in that anything you create/write
+to the mounted filesystem gets written to a tar-file of your choosing;
+
+  It does NOT currently allow seeking even of open descriptors,
+but at the end of it all, it's backed by a bytes.Buffer(), so
+fixing that (while open!) should be doable if someones interested.
+
+  The magic is that once you close the file, the header and data
+is written to the tar-file (and not before!), so you must
+have sufficient ram (or swap) on your system for the fuse-layer
+to buffer the largest amount of outstanding (e.g., un-closed) descriptors
+created by something utilizing the WORN.
+
+  The filesystem (tar) is only closed (valid) at unmount, so
+to avoid errors untarring your results, you'll need to unmount the FS.
+
+  Currently, only standard file-types are supported.
+
+  It's probably fragile as heck, so feel free to report bugs!
+
+
