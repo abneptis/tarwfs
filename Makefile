@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=tarwfs
+TARG=github.com/abneptis/tarwfs
 
 DEPS=\
 	onclose_writer/\
@@ -8,8 +8,7 @@ DEPS=\
 
 GOFILES=\
 	file.go\
-	main.go\
         mounted.go\
 
-include $(GOROOT)/src/Make.cmd
 
+include $(GOROOT)/src/Make.pkg

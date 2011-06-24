@@ -1,4 +1,4 @@
-package main
+package tarwfs
 
 import (
   . "log"
@@ -12,20 +12,20 @@ import (
   "time"
 )
 
-type WSOWFS struct {
+type TarwFS struct {
   fuse.DefaultFileSystem
-  Files       map[string]*os.FileInfo
-  IsDir   map[string]bool
+  files       map[string]*os.FileInfo
+  isDir   map[string]bool
   lock    *sync.Mutex 
   w       *tar.Writer
 }
 
-func NewWSOWFS(w io.Writer)(wfs *WSOWFS){
-  wfs = &WSOWFS{
-    Files: map[string]*os.FileInfo{
+func NewTarwFS(w io.Writer)(wfs *TarwFS){
+  wfs = &TarwFS{
+    files: map[string]*os.FileInfo{
       "": &os.FileInfo{Mode: 0755 | syscall.S_IFDIR},
     },
-    IsDir: map[string]bool{"":true},
+    isDir: map[string]bool{"":true},
     lock: &sync.Mutex{},
     w: tar.NewWriter(w),
   }
@@ -33,10 +33,10 @@ func NewWSOWFS(w io.Writer)(wfs *WSOWFS){
   return
 } 
 
-func (self *WSOWFS)GetAttr(name string)(fi *os.FileInfo, eno fuse.Status){
+func (self *TarwFS)GetAttr(name string)(fi *os.FileInfo, eno fuse.Status){
   Printf("GetAttr:start:%s", name)
   self.lock.Lock()
-  fi, exists := self.Files[name]
+  fi, exists := self.files[name]
   self.lock.Unlock() 
   if exists {
     eno = fuse.OK
@@ -48,10 +48,10 @@ func (self *WSOWFS)GetAttr(name string)(fi *os.FileInfo, eno fuse.Status){
   return
 }
 
-func (self *WSOWFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status) {
+func (self *TarwFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status) {
   Printf("GetAttr:start:%s", name)
   self.lock.Lock()
-  is_dir, exists := self.IsDir[name]
+  is_dir, exists := self.isDir[name]
   self.lock.Unlock()
   if exists && is_dir {
     c =  make(chan fuse.DirEntry,16)
@@ -59,12 +59,12 @@ func (self *WSOWFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status)
     go func(){
       self.lock.Lock()
       // send ourselves first.
-      dent := fuse.DirEntry{Name: ".", Mode: self.Files[name].Mode}
+      dent := fuse.DirEntry{Name: ".", Mode: self.files[name].Mode}
       Printf("Opendir(%s) -> %s {%+v}", name, ".", dent)
       self.lock.Unlock() 
       c <- dent
       self.lock.Lock()
-      for k,v := range(self.Files){
+      for k,v := range(self.files){
         self.lock.Unlock() 
         k_d, k_n := path.Split(k)
         if path.Join(name,k_n) == path.Join(k_d, k_n) && path.Join(name,k_n) != name {
@@ -91,18 +91,18 @@ func (self *WSOWFS) OpenDir(name string) (c chan fuse.DirEntry, eno fuse.Status)
   return
 }
 
-func (self *WSOWFS)Mkdir(name string, mode uint32)( eno fuse.Status){
+func (self *TarwFS)Mkdir(name string, mode uint32)( eno fuse.Status){
   Printf("Open:Mkdir:%s:%x", name,mode)
   self.lock.Lock()
-  _, exists := self.IsDir[name]
+  _, exists := self.isDir[name]
   if exists {
     self.lock.Unlock()
     eno = fuse.EPERM
   } else {
-    self.Files[name] = &os.FileInfo{
+    self.files[name] = &os.FileInfo{
       Mode: mode | syscall.S_IFDIR,
     }
-    self.IsDir[name] = true
+    self.isDir[name] = true
     self.lock.Unlock()
     self.lock.Lock()
     now := time.Seconds()
@@ -126,16 +126,16 @@ func (self *WSOWFS)Mkdir(name string, mode uint32)( eno fuse.Status){
   return
 }
 
-func (self *WSOWFS)Create(name string, flags, mode uint32) (file fuse.File, eno fuse.Status){
+func (self *TarwFS)Create(name string, flags, mode uint32) (file fuse.File, eno fuse.Status){
   Printf("Create:%s", name)
   self.lock.Lock()
-  _, exists := self.IsDir[name]
+  _, exists := self.isDir[name]
   if ! exists {
-    self.Files[name] = &os.FileInfo{ Mode: mode | syscall.S_IFREG, }
-    self.IsDir[name] = false
+    self.files[name] = &os.FileInfo{ Mode: mode | syscall.S_IFREG, }
+    self.isDir[name] = false
     self.lock.Unlock()
     start := time.Seconds()
-    file = NewFile(func(r io.Reader, rlen int64)(err os.Error){
+    file = newFile(func(r io.Reader, rlen int64)(err os.Error){
       self.lock.Lock()
       err = self.w.WriteHeader(&tar.Header{
        Typeflag: tar.TypeReg,
@@ -162,7 +162,7 @@ func (self *WSOWFS)Create(name string, flags, mode uint32) (file fuse.File, eno 
 
 
 
-func (self *WSOWFS)Unmount(){
+func (self *TarwFS)Unmount(){
   // In case someone else is finishing up still, wait for them to unmount the lock.
   self.lock.Lock()
   self.w.Close()

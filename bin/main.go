@@ -2,6 +2,7 @@ package main
 
 import (
   "github.com/hanwen/go-fuse/fuse"
+  "github.com/abneptis/tarwfs"
   "flag"
   "log"
   "os"

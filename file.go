@@ -1,4 +1,4 @@
-package main
+package tarwfs
 
 import (
   "github.com/hanwen/go-fuse/fuse"
@@ -9,16 +9,16 @@ import (
   "bytes"
 )
 
-type File struct {
+type file struct {
   fuse.DefaultFile
   w io.WriteCloser
 }
 
-func NewFile(f func(r io.Reader, l int64)(err os.Error))(*File){
-  return &File{w: onclose_writer.New(bytes.NewBuffer(nil), f)}
+func newFile(f func(r io.Reader, l int64)(err os.Error))(*file){
+  return &file{w: onclose_writer.New(bytes.NewBuffer(nil), f)}
 }
 
-func (self *File)Write(wi *fuse.WriteIn, ib []byte) (written uint32, code fuse.Status){
+func (self *file)Write(wi *fuse.WriteIn, ib []byte) (written uint32, code fuse.Status){
   Printf("File:write:start:%+v", wi)
   Printf("File:write:start:%d", len(ib))
   // we need the result to fit into a uint32.
@@ -36,7 +36,7 @@ func (self *File)Write(wi *fuse.WriteIn, ib []byte) (written uint32, code fuse.S
   return
 }
 
-func (self *File)Release(){
+func (self *file)Release(){
   Printf("File:release")
   self.w.Close()
   Printf("File:release:complete")
