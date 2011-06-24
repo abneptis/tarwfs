@@ -1,0 +1,6 @@
+[submodule "go-fuse"]
+	path = go-fuse
+	url = git://github.com/abneptis/go-fuse.git
+[submodule "onclose_writer"]
+	path = onclose_writer
+	url = git://github.com/abneptis/onclose_writer.git
